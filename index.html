@@ -243,9 +243,68 @@
             color: #ff9800;
             margin-top: 8px;
         }
+        .welcome-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .welcome-overlay.hidden { display: none; }
+        .welcome-box {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        .welcome-box h2 {
+            color: #1a472a;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        .welcome-box p {
+            color: #555;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            font-size: 15px;
+        }
+        .welcome-box .start-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .welcome-box .start-btn:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
+    <div class="welcome-overlay" id="welcome">
+        <div class="welcome-box">
+            <h2>Welcome!</h2>
+            <p>Practice your Texas Hold'em pre-flop decisions. You'll see two cards and the action before you.</p>
+            <p>Choose to <strong>Raise</strong>, <strong>Call</strong>, or <strong>Fold</strong> based on your hand and position.</p>
+            <p>If you raise, pick the right size too!</p>
+            <button class="start-btn" id="start-btn">Let's Play</button>
+        </div>
+    </div>
+
     <div class="container">
         <h1>Starting Hands Trainer</h1>
         <p class="subtitle">Texas Hold'em Pre-Flop Decisions</p>
@@ -574,12 +633,28 @@
             document.getElementById('action-buttons').style.display = 'flex';
         }
 
+        // Welcome popup
+        function showWelcome() {
+            if (!localStorage.getItem('poker-trainer-visited')) {
+                document.getElementById('welcome').classList.remove('hidden');
+            } else {
+                document.getElementById('welcome').classList.add('hidden');
+            }
+        }
+
+        function hideWelcome() {
+            document.getElementById('welcome').classList.add('hidden');
+            localStorage.setItem('poker-trainer-visited', 'true');
+        }
+
         // Init
         addTapHandler(document.getElementById('btn-raise'), showRaiseSizing);
         addTapHandler(document.getElementById('btn-call'), () => makeDecision('call', 0));
         addTapHandler(document.getElementById('btn-fold'), () => makeDecision('fold', 0));
         addTapHandler(document.getElementById('btn-back'), hideSizingPanel);
         addTapHandler(document.getElementById('next-btn'), () => dealHand());
+        addTapHandler(document.getElementById('start-btn'), hideWelcome);
+        showWelcome();
         dealHand();
     </script>
 </body>
