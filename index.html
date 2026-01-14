@@ -672,6 +672,9 @@
             currentHand = { rank1: r1, rank2: r2, suit1: s1, suit2: s2, handKey: getHandKey(r1,r2,suited), suited };
             currentPosition = positions[Math.random()*6|0];
             currentScenario = scenarios[Math.random()*6|0];
+            // UTG is first to act - can only have "folded to you"
+            if (currentPosition === 'UTG (First)') currentScenario = scenarios[0];
+            // Big Blind can't have "folded to you" - at minimum someone limped or raised
             if (currentPosition === 'Big Blind' && currentScenario.id === 'folded_to_you') currentScenario = scenarios[1];
             correctAnswer = getCorrectAction(currentHand.handKey, currentPosition, currentScenario);
 
@@ -708,8 +711,8 @@
                 text: 'One seat before the Button. A strong position - you can open wider since only the Button and blinds act after you. Great for stealing blinds.'
             },
             'Button': {
-                title: 'Button (BTN)',
-                text: 'The best position! You act last after the flop, giving you maximum information. Play the widest range here and be aggressive.'
+                title: 'Button / Dealer (BTN)',
+                text: 'The dealer position and the best seat at the table! You act last after the flop, giving you maximum information. Play the widest range here and be aggressive.'
             },
             'Small Blind': {
                 title: 'Small Blind (SB)',
