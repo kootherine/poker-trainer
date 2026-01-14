@@ -674,18 +674,17 @@
         }
 
         function dealHand() {
-            // Build a proper 52-card deck and deal 2 unique cards
-            const deck = [];
-            for (let r of ranks) {
-                for (let s of suits) {
-                    deck.push({ rank: r, suit: s });
-                }
-            }
-            // Shuffle and pick 2
-            const card1 = deck.splice(Math.random() * deck.length | 0, 1)[0];
-            const card2 = deck.splice(Math.random() * deck.length | 0, 1)[0];
-            const r1 = card1.rank, s1 = card1.suit;
-            const r2 = card2.rank, s2 = card2.suit;
+            // Deal 2 unique cards - pick first card, then pick second ensuring it's different
+            const r1 = ranks[Math.floor(Math.random() * 13)];
+            const s1 = suits[Math.floor(Math.random() * 4)];
+
+            // Keep picking second card until it's different from first
+            let r2, s2;
+            do {
+                r2 = ranks[Math.floor(Math.random() * 13)];
+                s2 = suits[Math.floor(Math.random() * 4)];
+            } while (r1 === r2 && s1 === s2);
+
             const suited = s1 === s2;
             currentHand = { rank1: r1, rank2: r2, suit1: s1, suit2: s2, handKey: getHandKey(r1,r2,suited), suited };
             currentPosition = positions[Math.random()*6|0];
