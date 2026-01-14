@@ -342,6 +342,20 @@
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
+
+        /* Desktop felt-like table texture */
+        @media (min-width: 768px) {
+            body {
+                /* keep the existing green gradient as the base */
+                background-color: #0b3b24;
+                background-image:
+                    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.06) 0, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+                    radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.45) 0, rgba(0, 0, 0, 0.45) 2px, transparent 2px),
+                    linear-gradient(135deg, #1a472a 0%, #0d2818 100%);
+                background-size: 4px 4px, 6px 6px, auto;
+                background-blend-mode: soft-light, soft-light, normal;
+            }
+        }
     </style>
 </head>
 <body>
