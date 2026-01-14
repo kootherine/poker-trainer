@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Poker Starting Hands Trainer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #0d2818 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #1a472a;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .score-board {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        .score-item { text-align: center; }
+        .score-label {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .score-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1a472a;
+        }
+        .situation-box {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        .situation-title {
+            font-size: 11px;
+            color: #e65100;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .situation-text {
+            font-size: 15px;
+            color: #333;
+            line-height: 1.4;
+        }
+        .action-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .action-fold { background: #ffebee; color: #c62828; }
+        .action-call { background: #e3f2fd; color: #1565c0; }
+        .action-raise { background: #e8f5e9; color: #2e7d32; }
+        .position-display {
+            text-align: center;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #e8f5e9;
+            border-radius: 8px;
+        }
+        .position-label { font-size: 12px; color: #666; }
+        .position-name { font-size: 18px; font-weight: bold; color: #1a472a; }
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #666;
+        }
+        .game-info strong { color: #1a472a; }
+        .cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .card {
+            width: 80px;
+            height: 115px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .card.red { color: #d32f2f; }
+        .card.black { color: #212121; }
+        .card-rank { font-size: 26px; font-weight: bold; }
+        .card-suit { font-size: 32px; }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        button {
+            flex: 1;
+            padding: 16px 15px;
+            font-size: 17px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        @media (hover: hover) {
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            }
+        }
+        button:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
+        .btn-raise { background: #4caf50; color: white; }
+        .btn-call { background: #2196f3; color: white; }
+        .btn-fold { background: #f44336; color: white; }
+        .btn-back { background: #9e9e9e; color: white; flex: 0.5; }
+        .sizing-panel {
+            display: none;
+            background: #f0f7f0;
+            border: 2px solid #4caf50;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .sizing-title {
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 12px;
+        }
+        .sizing-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .sizing-btn {
+            padding: 14px 12px;
+            font-size: 15px;
+            background: white;
+            border: 2px solid #4caf50;
+            color: #2e7d32;
+            border-radius: 8px;
+            min-height: 65px;
+        }
+        @media (hover: hover) {
+            .sizing-btn:hover {
+                background: #4caf50;
+                color: white;
+            }
+            .sizing-btn:hover .label { color: #e8f5e9; }
+        }
+        .sizing-btn:active {
+            background: #4caf50;
+            color: white;
+        }
+        .sizing-btn:active .label { color: #e8f5e9; }
+        .sizing-btn .amount { font-weight: bold; display: block; }
+        .sizing-btn .label { font-size: 11px; color: #666; }
+        .feedback {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .feedback.correct { background: #e8f5e9; color: #2e7d32; }
+        .feedback.incorrect { background: #ffebee; color: #c62828; }
+        .feedback.partial { background: #fff3e0; color: #e65100; }
+        .feedback-title { font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+        .feedback-subtitle { font-size: 13px; font-weight: bold; margin-bottom: 6px; }
+        .feedback-explanation { font-size: 13px; line-height: 1.4; }
+        .next-btn {
+            width: 100%;
+            background: #1a472a;
+            color: white;
+            display: none;
+        }
+        .hand-name {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        .streak {
+            text-align: center;
+            font-size: 14px;
+            color: #ff9800;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Starting Hands Trainer</h1>
+        <p class="subtitle">Texas Hold'em Pre-Flop Decisions</p>
+
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">Correct</div>
+                <div class="score-value" id="correct">0</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Total</div>
+                <div class="score-value" id="total">0</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Accuracy</div>
+                <div class="score-value" id="accuracy">0%</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Sizing</div>
+                <div class="score-value" id="sizing-accuracy">-</div>
+            </div>
+        </div>
+
+        <div class="situation-box">
+            <div class="situation-title">Action Before You</div>
+            <div class="situation-text" id="action-description">Everyone folds to you.</div>
+        </div>
+
+        <div class="position-display">
+            <div class="position-label">Your Position</div>
+            <div class="position-name" id="position">Button</div>
+        </div>
+
+        <div class="game-info">
+            <div>Blinds: <strong>$5/$10</strong></div>
+            <div>Pot: <strong id="pot-size">$15</strong></div>
+            <div>To Call: <strong id="to-call">$10</strong></div>
+        </div>
+
+        <div class="cards-container">
+            <div class="card" id="card1">
+                <div class="card-rank">A</div>
+                <div class="card-suit">♠</div>
+            </div>
+            <div class="card" id="card2">
+                <div class="card-rank">K</div>
+                <div class="card-suit">♠</div>
+            </div>
+        </div>
+
+        <div class="hand-name" id="hand-name">Ace-King Suited</div>
+
+        <div class="buttons" id="action-buttons">
+            <button class="btn-raise" id="btn-raise">Raise</button>
+            <button class="btn-call" id="btn-call">Call</button>
+            <button class="btn-fold" id="btn-fold">Fold</button>
+        </div>
+
+        <div class="sizing-panel" id="sizing-panel">
+            <div class="sizing-title">Choose Your Raise Size</div>
+            <div class="sizing-buttons" id="sizing-buttons"></div>
+            <div class="buttons" style="margin-top: 12px;">
+                <button class="btn-back" id="btn-back">Back</button>
+            </div>
+        </div>
+
+        <div class="feedback" id="feedback">
+            <div class="feedback-title" id="feedback-title">Correct!</div>
+            <div class="feedback-subtitle" id="feedback-subtitle"></div>
+            <div class="feedback-explanation" id="feedback-explanation"></div>
+        </div>
+
+        <button class="next-btn" id="next-btn">Next Hand</button>
+
+        <div class="streak" id="streak"></div>
+    </div>
+
+    <script>
+        const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+        const suits = ['♠', '♥', '♦', '♣'];
+        const positions = ['UTG (First)', 'Middle', 'Cutoff', 'Button', 'Small Blind', 'Big Blind'];
+        const BB = 10;
+
+        let correct = 0, total = 0, sizingCorrect = 0, sizingTotal = 0, streak = 0;
+        let currentHand = null, currentPosition = null, currentScenario = null;
+        let correctAnswer = null, correctSizing = null;
+
+        const scenarios = [
+            { id: 'folded_to_you', description: 'Everyone folds to you.', raisesAhead: 0, callersAhead: 0, pot: 15, toCall: 10, lastRaise: 0 },
+            { id: 'one_limper', description: '<span class="action-tag action-call">1 limper</span> called the big blind.', raisesAhead: 0, callersAhead: 1, pot: 25, toCall: 10, lastRaise: 0 },
+            { id: 'two_limpers', description: '<span class="action-tag action-call">2 limpers</span> in front of you.', raisesAhead: 0, callersAhead: 2, pot: 35, toCall: 10, lastRaise: 0 },
+            { id: 'one_raise', description: 'One player <span class="action-tag action-raise">raised to $30</span>.', raisesAhead: 1, callersAhead: 0, pot: 45, toCall: 30, lastRaise: 30 },
+            { id: 'raise_and_caller', description: '<span class="action-tag action-raise">Raise to $30</span>, one <span class="action-tag action-call">caller</span>.', raisesAhead: 1, callersAhead: 1, pot: 75, toCall: 30, lastRaise: 30 },
+            { id: 'three_bet', description: 'Raise to $30, then <span class="action-tag action-raise">re-raise to $90</span>.', raisesAhead: 2, callersAhead: 0, pot: 135, toCall: 90, lastRaise: 90 }
+        ];
+
+        const handRankings = {
+            'AA': 1, 'KK': 1, 'QQ': 1, 'JJ': 2, 'TT': 2, '99': 3, '88': 3,
+            '77': 4, '66': 4, '55': 4, '44': 4, '33': 4, '22': 4,
+            'AKs': 1, 'AQs': 2, 'AJs': 2, 'ATs': 3, 'KQs': 2, 'KJs': 3, 'KTs': 3,
+            'QJs': 3, 'QTs': 4, 'JTs': 3, 'J9s': 4, 'T9s': 4, 'T8s': 5,
+            '98s': 4, '97s': 5, '87s': 4, '86s': 5, '76s': 4, '75s': 5,
+            '65s': 4, '64s': 5, '54s': 4,
+            'A9s': 4, 'A8s': 4, 'A7s': 4, 'A6s': 4, 'A5s': 4, 'A4s': 4, 'A3s': 4, 'A2s': 4,
+            'K9s': 5, 'K8s': 5, 'Q9s': 5,
+            'AKo': 2, 'AQo': 3, 'AJo': 3, 'ATo': 4, 'KQo': 3, 'KJo': 4, 'KTo': 5,
+            'QJo': 4, 'QTo': 5, 'JTo': 4, 'A9o': 5, 'A8o': 5,
+        };
+
+        function getHandKey(rank1, rank2, suited) {
+            const r1 = ranks.indexOf(rank1), r2 = ranks.indexOf(rank2);
+            const high = r1 > r2 ? rank1 : rank2, low = r1 > r2 ? rank2 : rank1;
+            if (high === low) return high + low;
+            return high + low + (suited ? 's' : 'o');
+        }
+
+        function getHandName(rank1, rank2, suited) {
+            const names = { 'A': 'Ace', 'K': 'King', 'Q': 'Queen', 'J': 'Jack', 'T': 'Ten', '9': 'Nine', '8': 'Eight', '7': 'Seven', '6': 'Six', '5': 'Five', '4': 'Four', '3': 'Three', '2': 'Two' };
+            const r1 = ranks.indexOf(rank1), r2 = ranks.indexOf(rank2);
+            const high = r1 > r2 ? rank1 : rank2, low = r1 > r2 ? rank2 : rank1;
+            if (high === low) return `Pocket ${names[high]}s`;
+            return `${names[high]}-${names[low]}${suited ? ' Suited' : ' Offsuit'}`;
+        }
+
+        const isLate = p => p === 'Button' || p === 'Cutoff';
+        const isBlind = p => p === 'Small Blind' || p === 'Big Blind';
+
+        function getCorrectAction(handKey, position, scenario) {
+            const ranking = handRankings[handKey] || 5;
+            const { raisesAhead, callersAhead } = scenario;
+
+            if (raisesAhead >= 2) {
+                if (ranking === 1) return 'raise';
+                if (ranking === 2 && ['AKs','AKo','JJ','TT'].includes(handKey)) return 'call';
+                return 'fold';
+            }
+            if (raisesAhead === 1) {
+                if (ranking === 1) return 'raise';
+                if (ranking === 2) return 'call';
+                if (ranking === 3 && isLate(position)) return 'call';
+                if (ranking === 4 && position === 'Big Blind') return 'call';
+                return 'fold';
+            }
+            if (callersAhead > 0) {
+                if (ranking <= 2) return 'raise';
+                if (ranking === 3) return isLate(position) ? 'raise' : 'call';
+                if (ranking === 4 && (isLate(position) || position === 'Big Blind')) return 'call';
+                return 'fold';
+            }
+            if (ranking <= 3) return 'raise';
+            if (ranking === 4) {
+                if (isLate(position)) return 'raise';
+                if (isBlind(position)) return position === 'Small Blind' ? 'raise' : 'call';
+                return 'fold';
+            }
+            if (isLate(position)) return 'raise';
+            return 'fold';
+        }
+
+        function getCorrectSizing(scenario) {
+            const { raisesAhead, callersAhead } = scenario;
+            if (raisesAhead >= 2) return { amount: 220, min: 200, max: 250 };
+            if (raisesAhead === 1) return { amount: 90, min: 80, max: 100 };
+            if (callersAhead > 0) {
+                const size = 30 + (callersAhead * 10);
+                return { amount: size, min: size - 10, max: size + 10 };
+            }
+            return { amount: 25, min: 22, max: 30 };
+        }
+
+        function getRaiseSizingOptions(scenario) {
+            const { raisesAhead, callersAhead } = scenario;
+            if (raisesAhead >= 2) return [
+                { amount: 180, label: 'Small (2x)' }, { amount: 220, label: 'Standard (2.4x)' },
+                { amount: 280, label: 'Large (3x)' }, { amount: 400, label: 'All-in' }
+            ];
+            if (raisesAhead === 1) return [
+                { amount: 60, label: 'Small (2x)' }, { amount: 90, label: 'Standard (3x)' },
+                { amount: 120, label: 'Large (4x)' }, { amount: 150, label: 'Overbet (5x)' }
+            ];
+            if (callersAhead === 2) return [
+                { amount: 30, label: 'Min (3x BB)' }, { amount: 50, label: 'Standard (5x BB)' },
+                { amount: 70, label: 'Large (7x BB)' }, { amount: 100, label: 'Overbet (10x)' }
+            ];
+            if (callersAhead === 1) return [
+                { amount: 25, label: 'Min (2.5x BB)' }, { amount: 40, label: 'Standard (4x BB)' },
+                { amount: 60, label: 'Large (6x BB)' }, { amount: 80, label: 'Overbet (8x)' }
+            ];
+            return [
+                { amount: 20, label: 'Min (2x BB)' }, { amount: 25, label: 'Standard (2.5x BB)' },
+                { amount: 35, label: 'Large (3.5x BB)' }, { amount: 50, label: 'Overbet (5x BB)' }
+            ];
+        }
+
+        function addTapHandler(el, cb) {
+            let moved = false;
+            el.addEventListener('touchstart', () => moved = false, { passive: true });
+            el.addEventListener('touchmove', () => moved = true, { passive: true });
+            el.addEventListener('touchend', e => { if (!moved) { e.preventDefault(); cb(); } });
+            el.addEventListener('click', () => { if (!('ontouchstart' in window)) cb(); });
+        }
+
+        function showRaiseSizing() {
+            document.getElementById('action-buttons').style.display = 'none';
+            const panel = document.getElementById('sizing-panel');
+            const btns = document.getElementById('sizing-buttons');
+            btns.innerHTML = getRaiseSizingOptions(currentScenario).map(o =>
+                `<button class="sizing-btn" data-amount="${o.amount}"><span class="amount">$${o.amount}</span><span class="label">${o.label}</span></button>`
+            ).join('');
+            btns.querySelectorAll('.sizing-btn').forEach(b => addTapHandler(b, () => makeDecision('raise', +b.dataset.amount)));
+            panel.style.display = 'block';
+        }
+
+        function hideSizingPanel() {
+            document.getElementById('sizing-panel').style.display = 'none';
+            document.getElementById('action-buttons').style.display = 'flex';
+        }
+
+        function getExplanation(handKey, position, scenario, action, ranking) {
+            const strength = ['','premium','strong','playable','speculative','weak'][ranking] || 'weak';
+            const { raisesAhead, callersAhead } = scenario;
+            if (raisesAhead >= 2) {
+                if (action === 'raise') return `4-bet for value with this ${strength} hand.`;
+                if (action === 'call') return `Call the 3-bet with this ${strength} hand.`;
+                return `Fold this ${strength} hand to a 3-bet.`;
+            }
+            if (raisesAhead === 1) {
+                if (action === 'raise') return `3-bet for value with this ${strength} hand.`;
+                if (action === 'call') return `Call the raise with this ${strength} hand.`;
+                return `Fold this ${strength} hand facing a raise.`;
+            }
+            if (callersAhead > 0) {
+                if (action === 'raise') return `Raise to isolate limpers with this ${strength} hand.`;
+                if (action === 'call') return `See a cheap flop with this ${strength} hand.`;
+                return `Fold this ${strength} hand.`;
+            }
+            if (action === 'raise') return `Open-raise with this ${strength} hand.`;
+            if (action === 'call') return `Check in the big blind.`;
+            return `Fold this ${strength} hand from this position.`;
+        }
+
+        function getSizingExplanation(scenario, chosen, correct) {
+            const { raisesAhead, callersAhead } = scenario;
+            let base = '';
+            if (raisesAhead >= 2) base = `4-bet to ~$${correct.amount} (2.2-2.5x).`;
+            else if (raisesAhead === 1) base = `3-bet to ~$${correct.amount} (3x raise).`;
+            else if (callersAhead > 0) base = `Raise to ~$${correct.amount} (${3+callersAhead}x BB).`;
+            else base = `Open to ~$${correct.amount} (2.5x BB).`;
+            if (chosen < correct.min) return base + ' Your bet was too small.';
+            if (chosen > correct.max) return base + ' Your bet was too large.';
+            return base;
+        }
+
+        function makeDecision(action, size) {
+            total++;
+            const actionOk = action === correctAnswer;
+            let sizeOk = true;
+            if (action === 'raise') {
+                sizingTotal++;
+                const cs = getCorrectSizing(currentScenario);
+                sizeOk = size >= cs.min && size <= cs.max;
+                if (sizeOk) sizingCorrect++;
+            }
+            const allOk = actionOk && (action !== 'raise' || sizeOk);
+            if (allOk) { correct++; streak++; } else streak = 0;
+
+            document.getElementById('correct').textContent = correct;
+            document.getElementById('total').textContent = total;
+            document.getElementById('accuracy').textContent = Math.round(correct/total*100) + '%';
+            document.getElementById('sizing-accuracy').textContent = sizingTotal > 0 ? Math.round(sizingCorrect/sizingTotal*100) + '%' : '-';
+
+            const fb = document.getElementById('feedback');
+            const cs = getCorrectSizing(currentScenario);
+            const ranking = handRankings[currentHand.handKey] || 5;
+
+            if (allOk) {
+                fb.className = 'feedback correct';
+                document.getElementById('feedback-title').textContent = 'Correct!';
+                document.getElementById('feedback-subtitle').textContent = '';
+            } else if (actionOk) {
+                fb.className = 'feedback partial';
+                document.getElementById('feedback-title').textContent = 'Right Action, Wrong Size';
+                document.getElementById('feedback-subtitle').textContent = `You bet $${size}, optimal is ~$${cs.amount}`;
+            } else {
+                fb.className = 'feedback incorrect';
+                document.getElementById('feedback-title').textContent = 'Incorrect';
+                document.getElementById('feedback-subtitle').textContent = correctAnswer.charAt(0).toUpperCase() + correctAnswer.slice(1) + ' was better';
+            }
+
+            let exp = getExplanation(currentHand.handKey, currentPosition, currentScenario, correctAnswer, ranking);
+            if (action === 'raise' || correctAnswer === 'raise') exp += ' ' + getSizingExplanation(currentScenario, size, cs);
+            document.getElementById('feedback-explanation').textContent = exp;
+
+            fb.style.display = 'block';
+            document.getElementById('action-buttons').style.display = 'none';
+            document.getElementById('sizing-panel').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'block';
+            document.getElementById('streak').textContent = streak >= 3 ? '🔥 ' + streak + ' in a row!' : '';
+        }
+
+        function dealHand() {
+            const s1 = suits[Math.random()*4|0], s2 = suits[Math.random()*4|0];
+            const r1 = ranks[Math.random()*13|0], r2 = ranks[Math.random()*13|0];
+            const suited = s1 === s2;
+            currentHand = { rank1: r1, rank2: r2, suit1: s1, suit2: s2, handKey: getHandKey(r1,r2,suited), suited };
+            currentPosition = positions[Math.random()*6|0];
+            currentScenario = scenarios[Math.random()*6|0];
+            if (currentPosition === 'Big Blind' && currentScenario.id === 'folded_to_you') currentScenario = scenarios[1];
+            correctAnswer = getCorrectAction(currentHand.handKey, currentPosition, currentScenario);
+
+            const c1 = document.getElementById('card1'), c2 = document.getElementById('card2');
+            c1.innerHTML = `<div class="card-rank">${r1}</div><div class="card-suit">${s1}</div>`;
+            c2.innerHTML = `<div class="card-rank">${r2}</div><div class="card-suit">${s2}</div>`;
+            c1.className = 'card ' + (s1==='♥'||s1==='♦' ? 'red' : 'black');
+            c2.className = 'card ' + (s2==='♥'||s2==='♦' ? 'red' : 'black');
+
+            document.getElementById('position').textContent = currentPosition;
+            document.getElementById('hand-name').textContent = getHandName(r1, r2, suited);
+            document.getElementById('action-description').innerHTML = currentScenario.description;
+            document.getElementById('pot-size').textContent = '$' + currentScenario.pot;
+            document.getElementById('to-call').textContent = '$' + currentScenario.toCall;
+
+            document.getElementById('feedback').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('sizing-panel').style.display = 'none';
+            document.getElementById('action-buttons').style.display = 'flex';
+        }
+
+        // Init
+        addTapHandler(document.getElementById('btn-raise'), showRaiseSizing);
+        addTapHandler(document.getElementById('btn-call'), () => makeDecision('call', 0));
+        addTapHandler(document.getElementById('btn-fold'), () => makeDecision('fold', 0));
+        addTapHandler(document.getElementById('btn-back'), hideSizingPanel);
+        addTapHandler(document.getElementById('next-btn'), () => dealHand());
+        dealHand();
+    </script>
+</body>
+</html>
