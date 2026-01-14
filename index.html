@@ -453,7 +453,7 @@
         let correctAnswer = null, correctSizing = null;
 
         const scenarios = [
-            { id: 'folded_to_you', description: 'Everyone folds to you.', raisesAhead: 0, callersAhead: 0, pot: 15, toCall: 10, lastRaise: 0 },
+            { id: 'folded_to_you', description: 'No one has entered the pot yet. First to act.', raisesAhead: 0, callersAhead: 0, pot: 15, toCall: 10, lastRaise: 0 },
             { id: 'one_limper', description: '<span class="action-tag action-call">1 limper</span> called the big blind.', raisesAhead: 0, callersAhead: 1, pot: 25, toCall: 10, lastRaise: 0 },
             { id: 'two_limpers', description: '<span class="action-tag action-call">2 limpers</span> in front of you.', raisesAhead: 0, callersAhead: 2, pot: 35, toCall: 10, lastRaise: 0 },
             { id: 'one_raise', description: 'One player <span class="action-tag action-raise">raised to $30</span>.', raisesAhead: 1, callersAhead: 0, pot: 45, toCall: 30, lastRaise: 30 },
