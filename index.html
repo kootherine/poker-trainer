@@ -697,8 +697,13 @@
             document.getElementById('action-description').innerHTML = currentScenario.description;
             document.getElementById('pot-size').textContent = '$' + currentScenario.pot;
             // Big Blind with no raise = free to see flop
-            const toCall = (currentPosition === 'Big Blind' && currentScenario.raisesAhead === 0) ? 0 : currentScenario.toCall;
+            const isFreeCheck = currentPosition === 'Big Blind' && currentScenario.raisesAhead === 0;
+            const toCall = isFreeCheck ? 0 : currentScenario.toCall;
             document.getElementById('to-call').textContent = '$' + toCall;
+
+            // Update button text and hide fold when it's a free check
+            document.getElementById('btn-call').textContent = isFreeCheck ? 'Check' : 'Call';
+            document.getElementById('btn-fold').style.display = isFreeCheck ? 'none' : 'flex';
 
             document.getElementById('feedback').style.display = 'none';
             document.getElementById('next-btn').style.display = 'none';
