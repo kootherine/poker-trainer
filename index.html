@@ -663,7 +663,10 @@
             }
 
             let exp = getExplanation(currentHand.handKey, currentPosition, currentScenario, correctAnswer, ranking);
-            if (action === 'raise' || correctAnswer === 'raise') exp += ' ' + getSizingExplanation(currentScenario, size, cs);
+            // Only show sizing explanation if raise was correct AND user raised
+            if (action === 'raise' && correctAnswer === 'raise') {
+                exp += ' ' + getSizingExplanation(currentScenario, size, cs);
+            }
             document.getElementById('feedback-explanation').textContent = exp;
 
             fb.style.display = 'block';
@@ -689,10 +692,18 @@
             currentHand = { rank1: r1, rank2: r2, suit1: s1, suit2: s2, handKey: getHandKey(r1,r2,suited), suited };
             currentPosition = positions[Math.random()*6|0];
             currentScenario = scenarios[Math.random()*6|0];
-            // UTG is first to act - can only have "folded to you"
-            if (currentPosition === 'UTG (First)') currentScenario = scenarios[0];
-            // Big Blind can't have "folded to you" - at minimum someone limped or raised
-            if (currentPosition === 'Big Blind' && currentScenario.id === 'folded_to_you') currentScenario = scenarios[1];
+            // Position-appropriate scenarios
+            // UTG is first to act - can only have "no action yet"
+            if (currentPosition === 'UTG (First)') {
+                currentScenario = scenarios[0];
+            }
+            // Small Blind: if "no action" it means everyone folded to them - they can steal, complete, or fold
+            // Middle position: could have UTG fold or act
+            // Cutoff/Button: could have various actions
+            // Big Blind: can't have "no action" - at minimum SB is in. Change to limper scenario.
+            if (currentPosition === 'Big Blind' && currentScenario.id === 'folded_to_you') {
+                currentScenario = scenarios[1]; // At least 1 limper
+            }
             correctAnswer = getCorrectAction(currentHand.handKey, currentPosition, currentScenario);
 
             const c1 = document.getElementById('card1'), c2 = document.getElementById('card2');
@@ -703,11 +714,25 @@
 
             document.getElementById('position').textContent = currentPosition;
             document.getElementById('hand-name').textContent = getHandName(r1, r2, suited);
-            document.getElementById('action-description').innerHTML = currentScenario.description;
+            // Adjust description for Small Blind when everyone folded
+            let description = currentScenario.description;
+            if (currentPosition === 'Small Blind' && currentScenario.id === 'folded_to_you') {
+                description = 'Everyone folded to you in the small blind.';
+            }
+            document.getElementById('action-description').innerHTML = description;
             document.getElementById('pot-size').textContent = '$' + currentScenario.pot;
-            // Big Blind with no raise = free to see flop
+            // Calculate correct "to call" amount based on position
+            let toCall = currentScenario.toCall;
             const isFreeCheck = currentPosition === 'Big Blind' && currentScenario.raisesAhead === 0;
-            const toCall = isFreeCheck ? 0 : currentScenario.toCall;
+            if (isFreeCheck) {
+                toCall = 0; // BB with no raise = free check
+            } else if (currentPosition === 'Small Blind' && currentScenario.raisesAhead === 0) {
+                toCall = 5; // SB already posted $5, only needs $5 more to complete
+            } else if (currentPosition === 'Small Blind' && currentScenario.raisesAhead > 0) {
+                toCall = currentScenario.toCall - 5; // SB already has $5 in
+            } else if (currentPosition === 'Big Blind' && currentScenario.raisesAhead > 0) {
+                toCall = currentScenario.toCall - 10; // BB already has $10 in
+            }
             document.getElementById('to-call').textContent = '$' + toCall;
 
             // Update button text and hide fold when it's a free check
