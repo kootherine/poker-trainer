@@ -292,9 +292,67 @@
             transform: scale(0.97);
             opacity: 0.9;
         }
+        .position-name {
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+        .info-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .info-overlay.hidden { display: none; }
+        .info-box {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 350px;
+            width: 100%;
+            text-align: center;
+        }
+        .info-box h3 {
+            color: #1a472a;
+            margin-bottom: 12px;
+            font-size: 20px;
+        }
+        .info-box p {
+            color: #555;
+            line-height: 1.5;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .info-box .close-btn {
+            background: #1a472a;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
     </style>
 </head>
 <body>
+    <div class="info-overlay hidden" id="position-info">
+        <div class="info-box">
+            <h3 id="info-title">Position</h3>
+            <p id="info-text">Description</p>
+            <button class="close-btn" id="close-info">Got it</button>
+        </div>
+    </div>
+
     <div class="welcome-overlay" id="welcome">
         <div class="welcome-box">
             <h2>Welcome!</h2>
@@ -635,6 +693,48 @@
             document.getElementById('action-buttons').style.display = 'flex';
         }
 
+        // Position descriptions
+        const positionInfo = {
+            'UTG (First)': {
+                title: 'UTG (Under the Gun)',
+                text: 'First to act after the blinds. This is the tightest position - you need strong hands because everyone acts after you. Play only premium hands here.'
+            },
+            'Middle': {
+                title: 'Middle Position',
+                text: 'Between early and late position. You can play a few more hands than UTG, but still be selective. You have some players behind you who could raise.'
+            },
+            'Cutoff': {
+                title: 'Cutoff (CO)',
+                text: 'One seat before the Button. A strong position - you can open wider since only the Button and blinds act after you. Great for stealing blinds.'
+            },
+            'Button': {
+                title: 'Button (BTN)',
+                text: 'The best position! You act last after the flop, giving you maximum information. Play the widest range here and be aggressive.'
+            },
+            'Small Blind': {
+                title: 'Small Blind (SB)',
+                text: 'You post half the big blind and act second-to-last preflop, but first after the flop. Tough position - be selective but defend against steals.'
+            },
+            'Big Blind': {
+                title: 'Big Blind (BB)',
+                text: 'You already have a full bet in. Last to act preflop, which is good, but out of position after the flop. Defend wider since you\'re getting a discount.'
+            }
+        };
+
+        function showPositionInfo() {
+            const pos = currentPosition;
+            const info = positionInfo[pos];
+            if (info) {
+                document.getElementById('info-title').textContent = info.title;
+                document.getElementById('info-text').textContent = info.text;
+                document.getElementById('position-info').classList.remove('hidden');
+            }
+        }
+
+        function hidePositionInfo() {
+            document.getElementById('position-info').classList.add('hidden');
+        }
+
         // Welcome popup
         function showWelcome() {
             if (!localStorage.getItem('poker-trainer-visited')) {
@@ -656,6 +756,8 @@
         addTapHandler(document.getElementById('btn-back'), hideSizingPanel);
         addTapHandler(document.getElementById('next-btn'), () => dealHand());
         addTapHandler(document.getElementById('start-btn'), hideWelcome);
+        addTapHandler(document.getElementById('position'), showPositionInfo);
+        addTapHandler(document.getElementById('close-info'), hidePositionInfo);
         showWelcome();
         dealHand();
     </script>
