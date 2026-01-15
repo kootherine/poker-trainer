@@ -595,6 +595,8 @@
                 if (posCat === 'sb') {
                     if (ranking <= 2) return 'raise';                    // iso with strong hands
                     if (ranking === 3 && callersAhead <= 2) return 'call'; // complete with decent hands
+                    // Allow some strong offsuit aces like ATo to complete
+                    if (handKey === 'ATo' && callersAhead === 1) return 'call';
                     return 'fold';
                 }
 
