@@ -501,40 +501,168 @@
         const isLate = p => p === 'Button' || p === 'Cutoff';
         const isBlind = p => p === 'Small Blind' || p === 'Big Blind';
 
-        function getCorrectAction(handKey, position, scenario) {
-            const ranking = handRankings[handKey] || 5;
-            const { raisesAhead, callersAhead } = scenario;
+        function getPositionCategory(position) {
+            if (position === 'UTG (First)') return 'utg';
+            if (position === 'Middle') return 'middle';
+            if (position === 'Cutoff') return 'co';
+            if (position === 'Button') return 'btn';
+            if (position === 'Small Blind') return 'sb';
+            if (position === 'Big Blind') return 'bb';
+            return 'middle';
+        }
 
+        function getCorrectAction(handKey, position, scenario) {
+            const ranking = handRankings[handKey] || 5; // 1 = best, 5 = worst
+            const { raisesAhead, callersAhead } = scenario;
+            const posCat = getPositionCategory(position);
+
+            // --- Multi-raise pots (3-bet/4-bet spots) ---
             if (raisesAhead >= 2) {
-                if (ranking === 1) return 'raise';
-                if (ranking === 2 && ['AKs','AKo','JJ','TT'].includes(handKey)) return 'call';
-                return 'fold';
-            }
-            if (raisesAhead === 1) {
-                if (ranking === 1) return 'raise';
-                if (ranking === 2) return 'call';
-                if (ranking === 3 && isLate(position)) return 'call';
-                if (ranking === 4 && position === 'Big Blind') return 'call';
-                return 'fold';
-            }
-            if (callersAhead > 0) {
-                // Big Blind with limpers = free to check, never fold!
-                if (position === 'Big Blind') {
-                    if (ranking <= 2) return 'raise';
-                    return 'call'; // Always check for free
+                // Very tight here from all positions
+                if (ranking === 1) {
+                    // Premiums 4-bet for value
+                    return 'raise';
                 }
-                if (ranking <= 2) return 'raise';
-                if (ranking === 3) return isLate(position) ? 'raise' : 'call';
-                if (ranking === 4 && isLate(position)) return 'call';
+                if (ranking === 2 && ['AKs', 'AKo', 'QQ', 'JJ'].includes(handKey)) {
+                    // Some strong hands can call the 3-bet/4-bet
+                    return 'call';
+                }
                 return 'fold';
             }
+
+            // --- Single-raise pots (facing an open raise) ---
+            if (raisesAhead === 1) {
+                // Early position vs raise: very tight
+                if (posCat === 'utg') {
+                    if (ranking === 1) return 'raise';        // 3-bet premiums
+                    if (ranking === 2 && ['AKs', 'AKo', 'QQ', 'JJ'].includes(handKey)) return 'call';
+                    return 'fold';
+                }
+
+                // Middle position vs raise
+                if (posCat === 'middle') {
+                    if (ranking === 1) return 'raise';        // 3-bet
+                    if (ranking === 2) return 'call';         // strong but not premiums
+                    if (ranking === 3 && ['AKo', 'AQs', 'KQs'].includes(handKey)) return 'call';
+                    return 'fold';
+                }
+
+                // Cutoff vs raise
+                if (posCat === 'co') {
+                    if (ranking === 1) return 'raise';
+                    if (ranking === 2) return 'call';
+                    if (ranking === 3) return 'call';
+                    // Occasionally defend with some speculative suiteds
+                    if (ranking === 4 && handKey.endsWith('s')) return 'call';
+                    return 'fold';
+                }
+
+                // Button vs raise: widest defend
+                if (posCat === 'btn') {
+                    if (ranking === 1) return 'raise';
+                    if (ranking === 2 || ranking === 3) return 'call';
+                    if (ranking === 4 && handKey.endsWith('s')) return 'call'; // suited connectors/gappers sometimes
+                    return 'fold';
+                }
+
+                // Small Blind vs raise: more 3-bet or fold, fewer flats
+                if (posCat === 'sb') {
+                    if (ranking === 1) return 'raise';
+                    if (ranking === 2) return 'call';
+                    // Occasionally defend playable suited hands
+                    if (ranking === 3 && handKey.endsWith('s')) return 'call';
+                    return 'fold';
+                }
+
+                // Big Blind vs raise: widest defend (already invested, good price)
+                if (posCat === 'bb') {
+                    if (ranking === 1) return 'raise';
+                    if (ranking === 2 || ranking === 3) return 'call';
+                    if (ranking === 4) return 'call'; // defend a lot in BB
+                    return 'fold';
+                }
+            }
+
+            // --- Limped pots (no raises, at least one caller) ---
+            if (callersAhead > 0) {
+                // Big Blind with limpers: free to check when no raise ahead
+                if (posCat === 'bb') {
+                    if (ranking <= 2) return 'raise'; // iso with strong hands
+                    return 'call'; // otherwise take the free/cheap flop
+                }
+
+                // Small Blind with limpers
+                if (posCat === 'sb') {
+                    if (ranking <= 2) return 'raise';                    // iso with strong hands
+                    if (ranking === 3 && callersAhead <= 2) return 'call'; // complete with decent hands
+                    return 'fold';
+                }
+
+                // UTG & Middle in limped pots (someone limped before you)
+                if (posCat === 'utg' || posCat === 'middle') {
+                    if (ranking <= 2) return 'raise'; // punish limpers with strong hands
+                    if (ranking === 3) return 'call'; // set-mine / see flop with playable hands
+                    return 'fold';
+                }
+
+                // CO & Button vs limpers: lots of iso-raising
+                if (posCat === 'co' || posCat === 'btn') {
+                    if (ranking <= 3) return 'raise';                     // iso frequently
+                    if (ranking === 4 && callersAhead >= 2) return 'call'; // multi-way suited/speculative
+                    return 'fold';
+                }
+            }
+
+            // --- Unopened pots (everyone folds to you) ---
+            if (callersAhead === 0 && raisesAhead === 0) {
+                // UTG open range: tightest
+                if (posCat === 'utg') {
+                    if (ranking <= 2) return 'raise'; // strong + premium
+                    if (ranking === 3 && ['AQo', 'AJs', 'KQs'].includes(handKey)) return 'raise';
+                    return 'fold';
+                }
+
+                // Middle position: a bit wider than UTG
+                if (posCat === 'middle') {
+                    if (ranking <= 3) return 'raise';
+                    if (ranking === 4 && handKey.endsWith('s')) return 'raise'; // some suited connectors
+                    return 'fold';
+                }
+
+                // Cutoff: fairly wide
+                if (posCat === 'co') {
+                    if (ranking <= 3) return 'raise';
+                    if (ranking === 4) return 'raise';
+                    // Occasionally steal with very weak suiteds
+                    if (ranking === 5 && handKey.endsWith('s')) return 'raise';
+                    return 'fold';
+                }
+
+                // Button: widest open range
+                if (posCat === 'btn') {
+                    if (ranking <= 4) return 'raise';
+                    // Allow some steals with weakest hands as well
+                    return 'raise';
+                }
+
+                // Small Blind unopened (everyone folds to SB)
+                if (posCat === 'sb') {
+                    if (ranking <= 3) return 'raise';                     // raise or steal
+                    if (ranking === 4) return 'call';                     // complete with playable hands
+                    return 'fold';
+                }
+
+                // Big Blind unopened shouldn't really happen (you’re last to act),
+                // but if it does, treat it like a free check / fold worst stuff.
+                if (posCat === 'bb') {
+                    if (ranking <= 4) return 'call';
+                    return 'fold';
+                }
+            }
+
+            // Fallback (should rarely hit)
             if (ranking <= 3) return 'raise';
-            if (ranking === 4) {
-                if (isLate(position)) return 'raise';
-                if (isBlind(position)) return position === 'Small Blind' ? 'raise' : 'call';
-                return 'fold';
-            }
-            if (isLate(position)) return 'raise';
+            if (ranking === 4 && (posCat === 'co' || posCat === 'btn' || posCat === 'bb')) return 'call';
             return 'fold';
         }
 
@@ -600,27 +728,114 @@
         function getExplanation(handKey, position, scenario, action, ranking) {
             const strength = ['','premium','strong','playable','speculative','weak'][ranking] || 'weak';
             const { raisesAhead, callersAhead } = scenario;
+            const posCat = getPositionCategory(position);
+
+            const posLabel = {
+                utg: 'early position (UTG)',
+                middle: 'middle position',
+                co: 'the cutoff',
+                btn: 'the button',
+                sb: 'the small blind',
+                bb: 'the big blind'
+            }[posCat] || 'this position';
+
+            // Helper snippets
+            const openLine = () => `From ${posLabel}, you should open-raise this ${strength} hand.`;
+            const foldLine = () => `This ${strength} hand is too weak to continue from ${posLabel} in this spot.`;
+            const callLine = () => `Calling is reasonable with this ${strength} hand from ${posLabel}.`;
+            const isoLine  = () => `Raising to isolate the limpers with this ${strength} hand from ${posLabel} is preferred.`;
+
+            // --- Multi-raise pots (3-bet / 4-bet spots) ---
             if (raisesAhead >= 2) {
-                if (action === 'raise') return `4-bet for value with this ${strength} hand.`;
-                if (action === 'call') return `Call the 3-bet with this ${strength} hand.`;
-                return `Fold this ${strength} hand to a 3-bet.`;
-            }
-            if (raisesAhead === 1) {
-                if (action === 'raise') return `3-bet for value with this ${strength} hand.`;
-                if (action === 'call') return `Call the raise with this ${strength} hand.`;
-                return `Fold this ${strength} hand facing a raise.`;
-            }
-            if (callersAhead > 0) {
-                if (action === 'raise') return `Raise to isolate limpers with this ${strength} hand.`;
-                if (action === 'call') {
-                    if (position === 'Big Blind') return `Check for free! You're in the Big Blind with no raise - always see the flop.`;
-                    return `See a cheap flop with this ${strength} hand.`;
+                if (action === 'raise') {
+                    return `You’re in a heavily contested pot (3-bet/4-bet already). With a ${strength} hand, continuing aggressively for value is correct here from ${posLabel}.`;
                 }
-                return `Fold this ${strength} hand.`;
+                if (action === 'call') {
+                    return `Facing multiple raises, this ${strength} hand is just strong enough to continue by calling from ${posLabel}, but not strong enough to 4-bet for value.`;
+                }
+                return `With multiple raises already in, ${strength} hands like this are usually folded from ${posLabel} unless they’re premium.`;
             }
-            if (action === 'raise') return `Open-raise with this ${strength} hand.`;
-            if (action === 'call') return `Check in the big blind.`;
-            return `Fold this ${strength} hand from this position.`;
+
+            // --- Single-raise pots (facing an open raise) ---
+            if (raisesAhead === 1) {
+                if (action === 'raise') {
+                    return `Facing a single raise, this ${strength} hand is strong enough to 3-bet for value from ${posLabel}, putting pressure on the opener and building the pot when ahead.`;
+                }
+                if (action === 'call') {
+                    if (posCat === 'bb') {
+                        return `You’re in the big blind facing a raise. Given the price you’re getting and your ${strength} hand, defending by calling is standard.`;
+                    }
+                    if (posCat === 'sb') {
+                        return `From the small blind facing a raise, this ${strength} hand is just good enough to continue by calling, even though you’ll be out of position postflop.`;
+                    }
+                    if (posCat === 'btn' || posCat === 'co') {
+                        return `With position and a ${strength} hand, calling the raise from ${posLabel} keeps the pot manageable and lets you realize your positional advantage.`;
+                    }
+                    return `From ${posLabel} versus a single raise, this ${strength} hand is good enough to call but not strong enough to 3-bet aggressively.`;
+                }
+                return `Facing a raise from ${posLabel}, this ${strength} hand is not profitable to continue with. Folding avoids getting involved with a dominated or difficult hand out of position.`;
+            }
+
+            // --- Limped pots (no raises, at least one caller) ---
+            if (callersAhead > 0) {
+                if (action === 'raise') {
+                    if (posCat === 'btn' || posCat === 'co') {
+                        return `One or more players have limped. From ${posLabel}, it’s strong to raise this ${strength} hand to isolate the limpers and take advantage of your position.`;
+                    }
+                    if (posCat === 'bb') {
+                        return `Several players have entered the pot cheaply. From the big blind with a ${strength} hand, raising to punish the limpers and build a pot with a likely edge is correct.`;
+                    }
+                    return `${isoLine()} You punish limpers, build the pot when ahead, and deny equity to weaker hands.`;
+                }
+                if (action === 'call') {
+                    if (posCat === 'bb') {
+                        return `With limpers and no raise, you’re in the big blind getting a free or very cheap look at the flop. Checking/calling with this ${strength} hand is standard here.`;
+                    }
+                    if (posCat === 'sb') {
+                        return `In the small blind facing limpers, completing with this ${strength} hand is fine: you’re getting good odds to see a flop, even though you’ll be out of position.`;
+                    }
+                    return `With limpers already in, calling from ${posLabel} with this ${strength} hand is okay: you’re seeing a multi-way flop at a good price with a playable holding.`;
+                }
+                return `Even in a limped pot, this ${strength} hand is too weak from ${posLabel}. Folding avoids playing trash out of position in a multi-way pot.`;
+            }
+
+            // --- Unopened pots (everyone folds to you) ---
+            if (raisesAhead === 0 && callersAhead === 0) {
+                if (action === 'raise') {
+                    if (posCat === 'utg') {
+                        return `Everyone has folded to you in early position. UTG requires the tightest opening range, and this ${strength} hand is just strong enough to open-raise profitably.`;
+                    }
+                    if (posCat === 'middle') {
+                        return `In middle position with no one yet in the pot, this ${strength} hand is good enough to open-raise. You still need to be somewhat tight, but can play wider than UTG.`;
+                    }
+                    if (posCat === 'co') {
+                        return `Folded to you in the cutoff, you can open fairly wide. This ${strength} hand is comfortably within a reasonable opening range from ${posLabel}.`;
+                    }
+                    if (posCat === 'btn') {
+                        return `On the button with everyone folding to you, you should open-raise very aggressively. This ${strength} hand is an easy open given your positional advantage.`;
+                    }
+                    if (posCat === 'sb') {
+                        return `Everyone has folded to your small blind. Raising with this ${strength} hand applies pressure to the big blind and can often pick up the pot uncontested.`;
+                    }
+                    // BB "unopened" is weird but treat it simply:
+                    return `With everyone folding to you and this ${strength} hand, taking the initiative and raising from ${posLabel} is acceptable.`;
+                }
+                if (action === 'call') {
+                    if (posCat === 'sb') {
+                        return `Everyone folds to your small blind. Completing with this ${strength} hand is fine: you invest a little more to see a flop, while keeping the pot small.`;
+                    }
+                    if (posCat === 'bb') {
+                        return `As the big blind in an unopened pot, you’re effectively checking your option. With this ${strength} hand there’s no need to build a bigger pot out of position.`;
+                    }
+                    return `Calling instead of raising keeps the pot small, but from ${posLabel} you usually either raise or fold preflop; flatting here is a more conservative line.`;
+                }
+                return foldLine();
+            }
+
+            // --- Fallback (should rarely be hit) ---
+            if (action === 'raise') return openLine();
+            if (action === 'call') return callLine();
+            return foldLine();
         }
 
         function getSizingExplanation(scenario, chosen, correct) {
