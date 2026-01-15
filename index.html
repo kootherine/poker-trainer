@@ -629,12 +629,11 @@
                     return 'fold';
                 }
 
-                // Cutoff: fairly wide
+                // Cutoff: fairly wide but not total trash
                 if (posCat === 'co') {
                     if (ranking <= 3) return 'raise';
-                    if (ranking === 4) return 'raise';
-                    // Occasionally steal with very weak suiteds
-                    if (ranking === 5 && handKey.endsWith('s')) return 'raise';
+                    // Only open the better speculative hands, not the absolute weakest
+                    if (ranking === 4 && handKey.endsWith('s')) return 'raise';
                     return 'fold';
                 }
 
