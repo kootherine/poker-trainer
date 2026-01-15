@@ -637,11 +637,12 @@
                     return 'fold';
                 }
 
-                // Button: widest open range
+                // Button: widest open range, but still fold true trash
                 if (posCat === 'btn') {
-                    if (ranking <= 4) return 'raise';
-                    // Allow some steals with weakest hands as well
-                    return 'raise';
+                    if (ranking <= 3) return 'raise';
+                    // Open the better speculative hands, especially suited ones
+                    if (ranking === 4) return 'raise';
+                    return 'fold';
                 }
 
                 // Small Blind unopened (everyone folds to SB)
