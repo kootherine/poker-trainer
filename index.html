@@ -668,38 +668,46 @@
             return 'fold';
         }
 
-        function getCorrectSizing(scenario) {
-            const { raisesAhead, callersAhead } = scenario;
-            if (raisesAhead >= 2) return { amount: 220, min: 200, max: 250 };
-            if (raisesAhead === 1) return { amount: 90, min: 80, max: 100 };
-            if (callersAhead > 0) {
-                const size = 30 + (callersAhead * 10);
-                return { amount: size, min: size - 10, max: size + 10 };
+        function getCorrectSizing(scenario, position) {
+            const { raisesAhead, callersAhead, lastRaise } = scenario;
+            const posCat = getPositionCategory(position);
+            const oop = posCat === 'sb' || posCat === 'bb';
+
+            let target;
+
+            // Multi-raise pots (treat as 4-bet sizing over the last 3-bet)
+            if (raisesAhead >= 2) {
+                const factor = oop ? 2.75 : 2.5;
+                target = lastRaise * factor;
             }
-            return { amount: 25, min: 22, max: 30 };
+            // Facing a single raise (3-bet sizing)
+            else if (raisesAhead === 1) {
+                const factor = oop ? 3.5 : 3.0;
+                target = lastRaise * factor;
+            }
+            // Limped pots: open size plus +1 BB per limper
+            else if (callersAhead > 0) {
+                const baseOpen = (oop ? 3.5 : 2.5) * BB;
+                target = baseOpen + callersAhead * BB;
+            }
+            // Unopened pots: RFI
+            else {
+                target = (oop ? 3.5 : 2.5) * BB;
+            }
+
+            const amount = Math.round(target);
+            return { amount, min: amount * 0.9, max: amount * 1.1 };
         }
 
-        function getRaiseSizingOptions(scenario) {
-            const { raisesAhead, callersAhead } = scenario;
-            if (raisesAhead >= 2) return [
-                { amount: 180, label: 'Small (2x)' }, { amount: 220, label: 'Standard (2.4x)' },
-                { amount: 280, label: 'Large (3x)' }, { amount: 400, label: 'All-in' }
-            ];
-            if (raisesAhead === 1) return [
-                { amount: 60, label: 'Small (2x)' }, { amount: 90, label: 'Standard (3x)' },
-                { amount: 120, label: 'Large (4x)' }, { amount: 150, label: 'Overbet (5x)' }
-            ];
-            if (callersAhead === 2) return [
-                { amount: 30, label: 'Min (3x BB)' }, { amount: 50, label: 'Standard (5x BB)' },
-                { amount: 70, label: 'Large (7x BB)' }, { amount: 100, label: 'Overbet (10x)' }
-            ];
-            if (callersAhead === 1) return [
-                { amount: 25, label: 'Min (2.5x BB)' }, { amount: 40, label: 'Standard (4x BB)' },
-                { amount: 60, label: 'Large (6x BB)' }, { amount: 80, label: 'Overbet (8x)' }
-            ];
+        function getRaiseSizingOptions(scenario, position) {
+            const cs = getCorrectSizing(scenario, position);
+            const target = cs.amount;
+
             return [
-                { amount: 20, label: 'Min (2x BB)' }, { amount: 25, label: 'Standard (2.5x BB)' },
-                { amount: 35, label: 'Large (3.5x BB)' }, { amount: 50, label: 'Overbet (5x BB)' }
+                { amount: Math.round(target * 0.8), label: 'Small' },
+                { amount: Math.round(target),      label: 'Standard' },
+                { amount: Math.round(target * 1.2), label: 'Large' },
+                { amount: Math.round(target * 1.6), label: 'Overbet' }
             ];
         }
 
@@ -715,8 +723,8 @@
             document.getElementById('action-buttons').style.display = 'none';
             const panel = document.getElementById('sizing-panel');
             const btns = document.getElementById('sizing-buttons');
-            btns.innerHTML = getRaiseSizingOptions(currentScenario).map(o =>
-                `<button class="sizing-btn" data-amount="${o.amount}"><span class="amount">$${o.amount}</span><span class="label">${o.label}</span></button>`
+            btns.innerHTML = getRaiseSizingOptions(currentScenario, currentPosition).map(o =>
+                `<button class=\"sizing-btn\" data-amount=\"${o.amount}\"><span class=\"amount\">$${o.amount}</span><span class=\"label\">${o.label}</span></button>`
             ).join('');
             btns.querySelectorAll('.sizing-btn').forEach(b => addTapHandler(b, () => makeDecision('raise', +b.dataset.amount)));
             panel.style.display = 'block';
@@ -840,25 +848,37 @@
             return foldLine();
         }
 
-        function getSizingExplanation(scenario, chosen, correct) {
+        function getSizingExplanation(scenario, chosen, correct, position) {
             const { raisesAhead, callersAhead } = scenario;
+            const posCat = getPositionCategory(position);
+            const oop = posCat === 'sb' || posCat === 'bb';
             let base = '';
-            if (raisesAhead >= 2) base = `4-bet to ~$${correct.amount} (2.2-2.5x).`;
-            else if (raisesAhead === 1) base = `3-bet to ~$${correct.amount} (3x raise).`;
-            else if (callersAhead > 0) base = `Raise to ~$${correct.amount} (${3+callersAhead}x BB).`;
-            else base = `Open to ~$${correct.amount} (2.5x BB).`;
+
+            if (raisesAhead >= 2) {
+                const mult = oop ? '2.75x' : '2.5x';
+                base = `4-bet to ~$${Math.round(correct.amount)} (${mult} the 3-bet).`;
+            } else if (raisesAhead === 1) {
+                const mult = oop ? '3.5x' : '3x';
+                base = `3-bet to ~$${Math.round(correct.amount)} (${mult} the raise).`;
+            } else if (callersAhead > 0) {
+                const openMult = oop ? '3.5x' : '2.5x';
+                base = `Raise to ~$${Math.round(correct.amount)} (open ${openMult} BB + 1 BB per limper).`;
+            } else {
+                const openMult = oop ? '3.5x' : '2.5x';
+                base = `Open to ~$${Math.round(correct.amount)} (${openMult} BB).`;
+            }
+
             if (chosen < correct.min) return base + ' Your bet was too small.';
             if (chosen > correct.max) return base + ' Your bet was too large.';
             return base;
         }
-
         function makeDecision(action, size) {
             total++;
             const actionOk = action === correctAnswer;
             let sizeOk = true;
             if (action === 'raise') {
                 sizingTotal++;
-                const cs = getCorrectSizing(currentScenario);
+                const cs = getCorrectSizing(currentScenario, currentPosition);
                 sizeOk = size >= cs.min && size <= cs.max;
                 if (sizeOk) sizingCorrect++;
             }
@@ -871,7 +891,7 @@
             document.getElementById('sizing-accuracy').textContent = sizingTotal > 0 ? Math.round(sizingCorrect/sizingTotal*100) + '%' : '-';
 
             const fb = document.getElementById('feedback');
-            const cs = getCorrectSizing(currentScenario);
+            const cs = getCorrectSizing(currentScenario, currentPosition);
             const ranking = handRankings[currentHand.handKey] || 5;
 
             if (allOk) {
@@ -881,7 +901,7 @@
             } else if (actionOk) {
                 fb.className = 'feedback partial';
                 document.getElementById('feedback-title').textContent = 'Right Action, Wrong Size';
-                document.getElementById('feedback-subtitle').textContent = `You bet $${size}, optimal is ~$${cs.amount}`;
+                document.getElementById('feedback-subtitle').textContent = `You bet $${size}, optimal is ~$${Math.round(cs.amount)}`;
             } else {
                 fb.className = 'feedback incorrect';
                 document.getElementById('feedback-title').textContent = 'Incorrect';
@@ -891,7 +911,7 @@
             let exp = getExplanation(currentHand.handKey, currentPosition, currentScenario, correctAnswer, ranking);
             // Only show sizing explanation if raise was correct AND user raised
             if (action === 'raise' && correctAnswer === 'raise') {
-                exp += ' ' + getSizingExplanation(currentScenario, size, cs);
+                exp += ' ' + getSizingExplanation(currentScenario, size, cs, currentPosition);
             }
             document.getElementById('feedback-explanation').textContent = exp;
 
@@ -945,7 +965,21 @@
             if (currentPosition === 'Small Blind' && currentScenario.id === 'folded_to_you') {
                 description = 'Everyone folded to you in the small blind.';
             }
-            document.getElementById('action-description').innerHTML = description;
+
+            // Add spot-type label (RFI / Facing RFI / RFI vs 3-bet / vs limpers)
+            const { raisesAhead, callersAhead } = currentScenario;
+            let spotLabel = '';
+            if (raisesAhead >= 2) {
+                spotLabel = 'RFI vs 3-bet';
+            } else if (raisesAhead === 1) {
+                spotLabel = 'Facing RFI';
+            } else if (callersAhead > 0) {
+                spotLabel = 'Versus limpers';
+            } else {
+                spotLabel = 'Raise First In (RFI)';
+            }
+
+            document.getElementById('action-description').innerHTML = `<strong>${spotLabel}:</strong> ` + description;
             document.getElementById('pot-size').textContent = '$' + currentScenario.pot;
             // Calculate correct "to call" amount based on position
             let toCall = currentScenario.toCall;
