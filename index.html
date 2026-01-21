@@ -351,10 +351,33 @@
             touch-action: manipulation;
         }
 
+        /* Accessibility: Focus styles for all interactive elements */
+        button:focus,
+        .position-name:focus,
+        .sizing-btn:focus,
+        .start-btn:focus,
+        .close-btn:focus {
+            outline: 3px solid #1a472a;
+            outline-offset: 2px;
+        }
+
+        /* High contrast focus for dark backgrounds */
+        .welcome-overlay button:focus,
+        .info-overlay button:focus {
+            outline-color: #fff;
+        }
+
+        /* Media query for narrow screens - stack sizing buttons */
+        @media (max-width: 320px) {
+            .sizing-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+
     </style>
 </head>
 <body>
-    <div class="info-overlay hidden" id="position-info">
+    <div class="info-overlay hidden" id="position-info" role="dialog" aria-modal="true" aria-labelledby="info-title">
         <div class="info-box">
             <h3 id="info-title">Position</h3>
             <p id="info-text">Description</p>
@@ -362,9 +385,9 @@
         </div>
     </div>
 
-    <div class="welcome-overlay" id="welcome">
+    <div class="welcome-overlay" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
         <div class="welcome-box">
-            <h2>Welcome!</h2>
+            <h2 id="welcome-title">Welcome!</h2>
             <p>Practice your Texas Hold'em pre-flop decisions. You'll see two cards and the action before you.</p>
             <p>Choose to <strong>Raise</strong>, <strong>Call</strong>, or <strong>Fold</strong> based on your hand and position.</p>
             <p>If you raise, pick the right size too!</p>
@@ -374,11 +397,11 @@
         </div>
     </div>
 
-    <div class="container">
+    <main class="container">
         <h1>Starting Hands Trainer</h1>
         <p class="subtitle">Texas Hold'em Pre-Flop Decisions</p>
 
-        <div class="score-board">
+        <div class="score-board" aria-live="polite" aria-atomic="true">
             <div class="score-item">
                 <div class="score-label">Correct</div>
                 <div class="score-value" id="correct">0</div>
@@ -404,7 +427,7 @@
 
         <div class="position-display">
             <div class="position-label">Your Position</div>
-            <div class="position-name" id="position">Button</div>
+            <div class="position-name" id="position" role="button" tabindex="0" aria-label="Your position: Button. Press Enter for details.">Button</div>
         </div>
 
         <div class="game-info">
@@ -414,11 +437,11 @@
         </div>
 
         <div class="cards-container">
-            <div class="card" id="card1">
+            <div class="card" id="card1" role="img" aria-label="Ace of Spades">
                 <div class="card-rank">A</div>
                 <div class="card-suit">♠</div>
             </div>
-            <div class="card" id="card2">
+            <div class="card" id="card2" role="img" aria-label="King of Spades">
                 <div class="card-rank">K</div>
                 <div class="card-suit">♠</div>
             </div>
@@ -440,7 +463,7 @@
             </div>
         </div>
 
-        <div class="feedback" id="feedback">
+        <div class="feedback" id="feedback" role="alert" aria-live="assertive">
             <div class="feedback-title" id="feedback-title">Correct!</div>
             <div class="feedback-subtitle" id="feedback-subtitle"></div>
             <div class="feedback-explanation" id="feedback-explanation"></div>
@@ -449,7 +472,7 @@
         <button class="next-btn" id="next-btn">Next Hand</button>
 
         <div class="streak" id="streak"></div>
-    </div>
+    </main>
 
     <script>
         const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
@@ -719,6 +742,50 @@
             el.addEventListener('click', () => { if (!('ontouchstart' in window)) cb(); });
         }
 
+        // Keyboard handler for accessible buttons (Enter/Space activation)
+        function addKeyboardHandler(el, cb) {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    cb();
+                }
+            });
+        }
+
+        // Focus trap for modal dialogs
+        function trapFocus(modal) {
+            const focusableEls = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            const firstFocusable = focusableEls[0];
+            const lastFocusable = focusableEls[focusableEls.length - 1];
+
+            if (firstFocusable) firstFocusable.focus();
+
+            modal.addEventListener('keydown', e => {
+                if (e.key === 'Tab') {
+                    if (e.shiftKey && document.activeElement === firstFocusable) {
+                        e.preventDefault();
+                        lastFocusable.focus();
+                    } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+                        e.preventDefault();
+                        firstFocusable.focus();
+                    }
+                }
+                if (e.key === 'Escape') {
+                    if (!modal.classList.contains('hidden')) {
+                        if (modal.id === 'position-info') hidePositionInfo();
+                        if (modal.id === 'welcome') hideWelcome();
+                    }
+                }
+            });
+        }
+
+        // Card name helper for aria-labels
+        function getCardAriaLabel(rank, suit) {
+            const rankNames = { 'A': 'Ace', 'K': 'King', 'Q': 'Queen', 'J': 'Jack', 'T': 'Ten', '9': 'Nine', '8': 'Eight', '7': 'Seven', '6': 'Six', '5': 'Five', '4': 'Four', '3': 'Three', '2': 'Two' };
+            const suitNames = { '♠': 'Spades', '♥': 'Hearts', '♦': 'Diamonds', '♣': 'Clubs' };
+            return `${rankNames[rank] || rank} of ${suitNames[suit] || suit}`;
+        }
+
         function showRaiseSizing() {
             document.getElementById('action-buttons').style.display = 'none';
             const panel = document.getElementById('sizing-panel');
@@ -957,8 +1024,13 @@
             c2.innerHTML = `<div class="card-rank">${r2}</div><div class="card-suit">${s2}</div>`;
             c1.className = 'card ' + (s1==='♥'||s1==='♦' ? 'red' : 'black');
             c2.className = 'card ' + (s2==='♥'||s2==='♦' ? 'red' : 'black');
+            // Accessibility: add aria-labels to cards
+            c1.setAttribute('aria-label', getCardAriaLabel(r1, s1));
+            c2.setAttribute('aria-label', getCardAriaLabel(r2, s2));
 
-            document.getElementById('position').textContent = currentPosition;
+            const posEl = document.getElementById('position');
+            posEl.textContent = currentPosition;
+            posEl.setAttribute('aria-label', `Your position: ${currentPosition}. Press Enter for details.`);
             document.getElementById('hand-name').textContent = getHandName(r1, r2, suited);
             // Adjust description for Small Blind when everyone folded
             let description = currentScenario.description;
@@ -1037,20 +1109,38 @@
             const pos = currentPosition;
             const info = positionInfo[pos];
             if (info) {
+                lastFocusedElement = document.activeElement;
                 document.getElementById('info-title').textContent = info.title;
                 document.getElementById('info-text').textContent = info.text;
-                document.getElementById('position-info').classList.remove('hidden');
+                const overlay = document.getElementById('position-info');
+                overlay.classList.remove('hidden');
+                // Hide main content from screen readers when dialog is open
+                document.querySelector('main').setAttribute('aria-hidden', 'true');
+                // Focus the close button for accessibility
+                document.getElementById('close-info').focus();
             }
         }
 
         function hidePositionInfo() {
             document.getElementById('position-info').classList.add('hidden');
+            // Restore main content to screen readers
+            document.querySelector('main').removeAttribute('aria-hidden');
+            // Restore focus to element that opened the dialog
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+                lastFocusedElement = null;
+            }
         }
 
         // Welcome popup
         function showWelcome() {
             if (!localStorage.getItem('poker-trainer-visited')) {
-                document.getElementById('welcome').classList.remove('hidden');
+                const overlay = document.getElementById('welcome');
+                overlay.classList.remove('hidden');
+                // Hide main content from screen readers when dialog is open
+                document.querySelector('main').setAttribute('aria-hidden', 'true');
+                // Focus the start button for accessibility
+                setTimeout(() => document.getElementById('start-btn').focus(), 100);
             } else {
                 document.getElementById('welcome').classList.add('hidden');
             }
@@ -1059,7 +1149,14 @@
         function hideWelcome() {
             document.getElementById('welcome').classList.add('hidden');
             localStorage.setItem('poker-trainer-visited', 'true');
+            // Restore main content to screen readers
+            document.querySelector('main').removeAttribute('aria-hidden');
+            // Focus the first action button after welcome closes
+            document.getElementById('btn-raise').focus();
         }
+
+        // Store reference to element that opened dialog, for focus restoration
+        let lastFocusedElement = null;
 
         // Init
         addTapHandler(document.getElementById('btn-raise'), showRaiseSizing);
@@ -1070,6 +1167,14 @@
         addTapHandler(document.getElementById('start-btn'), hideWelcome);
         addTapHandler(document.getElementById('position'), showPositionInfo);
         addTapHandler(document.getElementById('close-info'), hidePositionInfo);
+
+        // Add keyboard support for position name (CRITICAL accessibility fix)
+        addKeyboardHandler(document.getElementById('position'), showPositionInfo);
+
+        // Initialize focus traps for dialogs
+        trapFocus(document.getElementById('position-info'));
+        trapFocus(document.getElementById('welcome'));
+
         showWelcome();
         dealHand();
     </script>
